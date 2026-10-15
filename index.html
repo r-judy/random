@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎯 스마트 발표자 추첨기 - Smart Speaker Picker</title>
+  <meta name="description" content="공정하고 흥미진진한 랜덤 발표자 선정 웹 애플리케이션. 제외 번호 설정, 두구두구 룰렛 애니메이션, 축하 폭죽 효과 지원.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 배경 오로라 이펙트 -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- 파티클 폭죽용 캔버스 -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="app-container">
+    <!-- 헤더 -->
+    <header class="app-header">
+      <div class="brand-badge">
+        <span class="badge-dot"></span>
+        <span>Fair & Fun Presentation Picker</span>
+      </div>
+      <h1 class="app-title">
+        <span class="gradient-text">스마트 발표자</span> 뽑기
+      </h1>
+      <p class="app-subtitle">제외 번호 필터링과 두구두구 긴장감 넘치는 애니메이션으로 공정하게 추첨하세요!</p>
+      
+      <div class="header-controls">
+        <button type="button" id="sound-toggle-btn" class="icon-toggle-btn active" title="소리 켜기/끄기">
+          <span id="sound-icon">🔊</span>
+          <span id="sound-label">효과음 켜짐</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 메인 그리드 레이아웃 -->
+    <main class="main-layout">
+      <!-- 좌측: 설정 패널 -->
+      <section class="card settings-card" aria-label="추첨 설정">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="title-icon">⚙️</span>
+            <span>추첨 설정</span>
+          </h2>
+          <!-- 모드 탭 (번호 / 이름) -->
+          <div class="mode-tabs">
+            <button type="button" id="tab-mode-number" class="mode-tab active" data-mode="number">🔢 번호 모드</button>
+            <button type="button" id="tab-mode-name" class="mode-tab" data-mode="name">🏷️ 이름 모드</button>
+          </div>
+        </div>
+
+        <form id="picker-form" class="settings-form" onsubmit="return false;">
+          <!-- [번호 모드 영역] -->
+          <div id="number-mode-panel" class="mode-panel active">
+            <!-- 1) 전체 사람 수 -->
+            <div class="form-group">
+              <div class="label-row">
+                <label for="total-count-input" class="form-label">
+                  <span class="label-icon">👥</span> 전체 사람 수
+                </label>
+                <span class="label-desc">(1번부터 시작)</span>
+              </div>
+              <div class="input-stepper-wrap">
+                <input 
+                  type="number" 
+                  id="total-count-input" 
+                  name="totalCount" 
+                  class="styled-input" 
+                  value="30" 
+                  min="1" 
+                  max="500" 
+                  required
+                >
+                <div class="preset-chips">
+                  <button type="button" class="preset-btn" data-value="15">15명</button>
+                  <button type="button" class="preset-btn" data-value="25">25명</button>
+                  <button type="button" class="preset-btn" data-value="30">30명</button>
+                  <button type="button" class="preset-btn" data-value="35">35명</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2) 제외할 번호 -->
+            <div class="form-group">
+              <div class="label-row">
+                <label for="exclude-input" class="form-label">
+                  <span class="label-icon">🚫</span> 제외할 번호
+                </label>
+                <span class="label-desc">쉼표(,)나 공백으로 구분</span>
+              </div>
+              <input 
+                type="text" 
+                id="exclude-input" 
+                name="excludeNumbers" 
+                class="styled-input" 
+                placeholder="예: 3, 7, 14 21"
+              >
+              <div id="exclude-chips-container" class="chips-container"></div>
+            </div>
+          </div>
+
+          <!-- [이름 모드 영역] -->
+          <div id="name-mode-panel" class="mode-panel">
+            <div class="form-group">
+              <div class="label-row">
+                <label for="names-input" class="form-label">
+                  <span class="label-icon">📝</span> 참가자 명단 입력
+                </label>
+                <span class="label-desc">줄바꿈 또는 쉼표로 구분</span>
+              </div>
+              <textarea 
+                id="names-input" 
+                class="styled-textarea" 
+                rows="4" 
+                placeholder="김철수&#10;이영희&#10;박지성&#10;손흥민&#10;정우성"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- 3) 발표자 수 -->
+          <div class="form-group highlight-group">
+            <div class="label-row">
+              <label for="speaker-count-input" class="form-label">
+                <span class="label-icon">🎤</span> 뽑을 발표자 수
+              </label>
+              <span id="candidate-count-badge" class="badge-count">추첨 가능: 30명</span>
+            </div>
+            <div class="stepper-row">
+              <button type="button" id="btn-speaker-minus" class="stepper-btn" aria-label="발표자 수 감소">-</button>
+              <input 
+                type="number" 
+                id="speaker-count-input" 
+                name="speakerCount" 
+                class="styled-input stepper-input" 
+                value="3" 
+                min="1" 
+                max="100" 
+                required
+              >
+              <button type="button" id="btn-speaker-plus" class="stepper-btn" aria-label="발표자 수 증가">+</button>
+            </div>
+          </div>
+
+          <!-- 추가 옵션 -->
+          <div class="options-group">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="auto-exclude-chk" checked>
+              <span class="checkbox-indicator"></span>
+              <span class="checkbox-label">📌 선정된 발표자 자동으로 제외 목록에 누적</span>
+            </label>
+            <label class="custom-checkbox">
+              <input type="checkbox" id="sort-result-chk" checked>
+              <span class="checkbox-indicator"></span>
+              <span class="checkbox-label">🔢 발표 번호 오름차순 정렬</span>
+            </label>
+          </div>
+
+          <!-- 추첨 메인 버튼 -->
+          <button type="button" id="draw-btn" class="primary-btn glow-btn">
+            <span class="btn-icon">🎲</span>
+            <span class="btn-text">두구두구... 발표자 뽑기!</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- 우측: 결과 디스플레이 패널 -->
+      <section class="card results-card" aria-label="추첨 결과">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span class="title-icon">🏆</span>
+            <span>선정된 발표자</span>
+          </h2>
+          <div class="action-btn-group">
+            <button type="button" id="copy-result-btn" class="sub-btn" disabled>
+              <span>📋 결과 복사</span>
+            </button>
+            <button type="button" id="clear-exclude-btn" class="sub-btn">
+              <span>🔄 제외 초기화</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 추첨 스테이지 -->
+        <div id="draw-stage" class="stage-container">
+          <!-- 비어있는 초기 상태 메시지 -->
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon-wrap">
+              <div class="pulse-ring"></div>
+              <span class="empty-icon">🎯</span>
+            </div>
+            <p class="empty-title">추첨 준비 완료!</p>
+            <p class="empty-desc">좌측에서 인원을 설정하고 [발표자 뽑기] 버튼을 눌러주세요.</p>
+          </div>
+
+          <!-- 롤링 중 상태 표시 -->
+          <div id="rolling-status" class="rolling-status hidden">
+            <div class="spinner"></div>
+            <span class="status-msg">긴장의 순간! 발표자를 추첨하고 있습니다...</span>
+          </div>
+
+          <!-- 발표자 카드 그리드 -->
+          <div id="winner-cards-grid" class="cards-grid"></div>
+        </div>
+
+        <!-- 하단 추첨 이력 -->
+        <div class="history-panel">
+          <div class="history-header">
+            <span class="history-title">📜 최근 추첨 기록</span>
+            <button type="button" id="clear-history-btn" class="text-btn">기록 삭제</button>
+          </div>
+          <div id="history-list" class="history-list">
+            <div class="history-empty">아직 추첨 기록이 없습니다.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>© 2026 스마트 발표자 뽑기 (Speaker Picker) • Python & Web GUI Version</p>
+    </footer>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div id="toast" class="toast-message hidden">
+    <span id="toast-icon">✅</span>
+    <span id="toast-text">복사되었습니다!</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
